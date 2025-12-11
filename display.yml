@@ -1,0 +1,81 @@
+esphome:
+  name: "ha-proxy-display"
+  friendly_name: "HA Bluetooth Proxy & Display"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Standard Logger
+logger:
+
+# API allows HA to talk to the ESP32
+api:
+
+# OTA allows wireless updates
+ota:
+  - platform: esphome
+    password: ""
+
+wifi:
+  # !!! CHANGE THESE !!!
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Fallback in case wifi fails
+  ap:
+    ssid: !secret ap_ssid
+    password: !secret ap_password
+
+# ==========================================
+# 1. BLUETOOTH PROXY CONFIGURATION
+# ==========================================
+esp32_ble_tracker:
+  scan_parameters:
+    # "Active" scanning is better for battery sensors like Govee
+    active: true
+
+bluetooth_proxy:
+  active: true
+
+# ==========================================
+# 2. DISPLAY CONFIGURATION
+# ==========================================
+
+# I2C Bus (Connect screen here)
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+  id: bus_a
+
+# Font Setup
+font:
+  - file: "gfonts://Roboto"
+    id: roboto_12
+    size: 12
+
+# Import Sensor from Home Assistant
+sensor:
+  - platform: homeassistant
+    id: current_temp
+    entity_id: sensor.h5179_004a_temperature
+    internal: true 
+
+# Screen Setup
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    i2c_id: bus_a
+    contrast: 20% # Low brightness to save power
+    update_interval: 10s # Update less frequently
+    lambda: |-
+      if (id(current_temp).has_state()) {
+        // Print temperature - Centered for 128x64
+        it.printf(64, 25, id(roboto_12), TextAlign::TOP_CENTER, "Green House - %.1f C", id(current_temp).state);
+      } else {
+        // Waiting for data
+        it.print(64, 25, id(roboto_12), TextAlign::TOP_CENTER, "Wait...");
+      }
