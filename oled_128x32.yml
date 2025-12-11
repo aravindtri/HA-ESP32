@@ -12,11 +12,13 @@ logger:
 
 # API allows HA to talk to the ESP32
 api:
+  encryption:
+    key: !secret api_key
 
 # OTA allows wireless updates
 ota:
   - platform: esphome
-    password: ""
+    password: !secret api_key
 
 wifi:
   # !!! CHANGE THESE !!!

@@ -12,11 +12,13 @@ logger:
 
 # API allows HA to talk to the ESP32
 api:
+  encryption:
+    key: !secret api_key
 
 # OTA allows wireless updates
 ota:
   - platform: esphome
-    password: ""
+    password: !secret api_key
 
 wifi:
   # !!! CHANGE THESE !!!
@@ -44,10 +46,6 @@ globals:
     type: time_t
     restore_value: no
     initial_value: '0'
-  - id: temp_snapshot
-    type: float
-    restore_value: no
-    initial_value: '0.0'
 
 # ==========================================
 # 2. DISPLAY CONFIGURATION
@@ -75,6 +73,13 @@ time:
     id: sntp_time
     timezone: "America/New_York" # Change to your timezone
 
+# Text Sensor for Trend
+text_sensor:
+  - platform: homeassistant
+    id: temp_trend_status
+    entity_id: sensor.green_house_temperature_status
+    internal: true
+
 # Import Sensor from Home Assistant
 sensor:
   - platform: homeassistant
@@ -97,6 +102,12 @@ sensor:
     attribute: temperature
     internal: true
 
+  # Temperature Derivative from Home Assistant
+  - platform: homeassistant
+    id: temp_derivative
+    entity_id: sensor.green_house_temperature_derivative
+    internal: true
+
   # Extra sensors for the status page
   - platform: uptime
     id: uptime_sensor
@@ -104,16 +115,6 @@ sensor:
 
 # Interval to switch pages every 5 seconds
 interval:
-  - interval: 5min
-    then:
-      - if:
-          condition:
-            sensor.in_range:
-              id: current_temp
-              above: -50
-          then:
-            - lambda: 'id(temp_snapshot) = id(current_temp).state;'
-
   - interval: 5s
     then:
       - display.page.show_next: my_display
@@ -136,27 +137,22 @@ display:
           
           // Value
           if (id(current_temp).has_state()) {
-            it.printf(64, 16, id(roboto_20), TextAlign::TOP_CENTER, "%.1f C", id(current_temp).state);
+            it.printf(64, 15, id(roboto_20), TextAlign::TOP_CENTER, "%.1f C", id(current_temp).state);
           } else {
-            it.print(64, 16, id(roboto_20), TextAlign::TOP_CENTER, "--.-");
+            it.print(64, 15, id(roboto_20), TextAlign::TOP_CENTER, "--.-");
           }
 
-          // Trend
-          if (id(current_temp).has_state() && id(temp_snapshot) != 0.0) {
-            float diff = id(current_temp).state - id(temp_snapshot);
-            if (diff > 0.2) {
-               it.print(64, 38, id(roboto_12), TextAlign::TOP_CENTER, "Rising");
-            } else if (diff < -0.2) {
-               it.print(64, 38, id(roboto_12), TextAlign::TOP_CENTER, "Falling");
-            } else {
-               it.print(64, 38, id(roboto_12), TextAlign::TOP_CENTER, "Stable");
-            }
+          // Trend & Derivative
+          if (id(temp_trend_status).has_state() && id(temp_derivative).has_state()) {
+             it.printf(64, 38, id(roboto_12), TextAlign::TOP_CENTER, "%s (%.1f C/h)", id(temp_trend_status).state.c_str(), id(temp_derivative).state);
+          } else if (id(temp_trend_status).has_state()) {
+             it.printf(64, 38, id(roboto_12), TextAlign::TOP_CENTER, "%s", id(temp_trend_status).state.c_str());
           } else {
-             it.print(64, 38, id(roboto_12), TextAlign::TOP_CENTER, "Calculating...");
+             it.print(64, 38, id(roboto_12), TextAlign::TOP_CENTER, "No Data");
           }
           
           // Footer (Page indicator)
-          it.print(64, 52, id(roboto_12), TextAlign::TOP_CENTER, ". o o o o");
+          it.print(64, 54, id(roboto_12), TextAlign::TOP_CENTER, ". o o o o");
 
       - id: page_humidity
         lambda: |-

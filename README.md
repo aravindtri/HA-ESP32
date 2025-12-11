@@ -59,6 +59,19 @@ This configuration is optimized for the slim 0.91" screens.
 *   It acts as a Bluetooth Proxy, extending the range for your Bluetooth sensors (like Govee).
 *   It pulls Weather and Sensor data *from* Home Assistant to display on the screen.
 
+## Security & API Key
+The configuration uses an encryption key for the Native API to ensure secure communication with Home Assistant.
+
+The key is stored in `secrets.yaml`.
+
+If you want to generate your own key from a passphrase, you can use this Python command (replace 'SecretWord' with your own):
+
+```bash
+python -c "import hashlib; import base64; print(base64.b64encode(hashlib.sha256(b'SecretWord').digest()).decode())"
+```
+
+When Home Assistant discovers the device, it will ask for this key. Copy the value from `secrets.yaml` and paste it into Home Assistant.
+
 ## Customization
 *   **WiFi:** Update the `ssid` and `password` in the `wifi` section of the YAML files.
 *   **Sensors:** Change the `entity_id` in the `sensor` and `text_sensor` sections to match your specific Home Assistant entities.
